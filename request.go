@@ -10,7 +10,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-// DoRetry 支持重试
+// DoRetry request with retry
 func DoRetry(opts Options) ([]byte, error) {
 	attempt := 0
 	buf, err := Do(opts)
@@ -27,7 +27,7 @@ func DoRetry(opts Options) ([]byte, error) {
 	return buf, err
 }
 
-// Do 发送请求
+// Do do request
 func Do(opts Options) ([]byte, error) {
 	if opts.URL == "" {
 		return nil, errors.New("invalid url, url:")
@@ -74,10 +74,20 @@ func Do(opts Options) ([]byte, error) {
 	if err != nil {
 		return nil, errors.WithMessage(err, "ray.request.do.resp.body.readall")
 	}
-	// 请求未成功
+	// request failed
 	if resp.StatusCode != http.StatusOK {
 		return nil, errors.Errorf("ray.request.do.resp.code,[code]%d,[body]\n%+s", resp.StatusCode, string(body))
 	}
+
+	// user defined logger
+	if opts.Logger != nil {
+		opts.Logger(&opts, err)
+	}
+	// global logger
+	if opts.Logger == nil && defaultLogger != nil {
+		defaultLogger(&opts, err)
+	}
+
 	return body, nil
 }
 

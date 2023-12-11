@@ -18,6 +18,7 @@ type Options struct {
 	ContentType string
 	Timeout     int
 	RetryTimes  int
+	Logger      LoggerHandle
 }
 
 var (
@@ -121,5 +122,12 @@ func WithTimeout(timeout int) OptionHandle {
 func WithRetryTimes(times int) OptionHandle {
 	return func(opt *Options) {
 		opt.RetryTimes = times
+	}
+}
+
+// WithLogger set logger
+func WithLogger(logger LoggerHandle) OptionHandle {
+	return func(opt *Options) {
+		opt.Logger = logger
 	}
 }

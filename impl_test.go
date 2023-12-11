@@ -9,6 +9,7 @@ import (
 )
 
 func TestGet(t *testing.T) {
+	SetGlobalLogger(StdLogger)
 	// Create a test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Set the response status code
@@ -142,6 +143,7 @@ func TestPostFormJson(t *testing.T) {
 }
 
 func TestPostRawJson(t *testing.T) {
+	SetGlobalLogger(StdLogger)
 	// Create a test server
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		v, err := io.ReadAll(r.Body)
@@ -157,7 +159,7 @@ func TestPostRawJson(t *testing.T) {
 
 	// Call the function being tested
 	var resp map[string]string
-	err := PostRawJson(context.Background(), server.URL, map[string]string{"key": "x-value"}, &resp)
+	err := PostRawJson(context.Background(), server.URL, map[string]string{"key": "x-value"}, &resp, map[string]string{"h1": "v1"}, map[string]string{"h2": "v2"})
 
 	// Check for errors
 	if err != nil {
