@@ -1,6 +1,7 @@
 package ray
 
 import (
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -117,4 +118,25 @@ func TestDoJSON(t *testing.T) {
 	if expectedData.Message != expectedMessage {
 		t.Errorf("Unexpected response data. Expected: %s, Got: %s", expectedMessage, expectedData.Message)
 	}
+}
+
+func TestProxy(t *testing.T) {
+
+	SetDefaultProxy("http://127.0.0.1:10808")
+	// Set up the test options
+	opts := Options{
+		URL:     "https://www.google.com",
+		Method:  http.MethodGet,
+		Timeout: 5,
+		Body:    nil,
+		// Proxy:   "http://127.0.0.1:10808",
+	}
+	// Call the function being tested
+	response, err := Do(opts)
+	// Check for errors
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+	}
+	// Check the response body
+	fmt.Println(string(response))
 }

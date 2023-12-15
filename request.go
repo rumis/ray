@@ -2,9 +2,11 @@ package ray
 
 import (
 	"context"
+	"crypto/tls"
 	"encoding/json"
 	"io"
 	"net/http"
+	"net/url"
 	"time"
 
 	"github.com/pkg/errors"
@@ -38,7 +40,7 @@ func Do(opts Options) ([]byte, error) {
 		ctx, cancel = context.WithTimeout(ctx, time.Second*time.Duration(opts.Timeout))
 		defer cancel()
 	}
-	url := opts.URL
+	reqUrl := opts.URL
 	var err error
 	if opts.Query != nil {
 		qstr, ok := opts.Query.(string)
@@ -49,10 +51,10 @@ func Do(opts Options) ([]byte, error) {
 			}
 		}
 		if len(qstr) != 0 {
-			url = url + "?" + qstr
+			reqUrl = reqUrl + "?" + qstr
 		}
 	}
-	req, err := http.NewRequestWithContext(ctx, opts.Method, url, opts.Body)
+	req, err := http.NewRequestWithContext(ctx, opts.Method, reqUrl, opts.Body)
 	if err != nil {
 		return nil, errors.WithMessage(err, "ray.request.do.request.new")
 	}
@@ -65,6 +67,22 @@ func Do(opts Options) ([]byte, error) {
 		req.Header.Add("Content-Type", opts.ContentType)
 	}
 	client := http.Client{}
+	if defaultProxy != "" || opts.Proxy != "" {
+		proxyURL := defaultProxy
+		if opts.Proxy != "" {
+			proxyURL = opts.Proxy
+		}
+		up, err := url.Parse(proxyURL)
+		if err != nil {
+			return nil, errors.WithMessage(err, "ray.request.do.proxy.parse")
+		}
+		client.Transport = &http.Transport{
+			Proxy: http.ProxyURL(up),
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		}
+	}
 	resp, err := client.Do(req)
 	if err != nil {
 		return nil, errors.WithMessage(err, "ray.request.do.request")

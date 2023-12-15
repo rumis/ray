@@ -18,12 +18,14 @@ type Options struct {
 	ContentType string
 	Timeout     int
 	RetryTimes  int
+	Proxy       string
 	Logger      LoggerHandle
 }
 
 var (
-	defaultTimeout    int = 3
-	defaultRetryTimes int = 2
+	defaultTimeout    int    = 3
+	defaultRetryTimes int    = 2
+	defaultProxy      string = ""
 )
 
 // SetDefaultRetryTimesAndTimeout reset default timeout and retry times
@@ -36,6 +38,11 @@ func SetDefaultRetryTimesAndTimeout(timeout int, retryTimes int) {
 		retryTimes = 1
 	}
 	defaultRetryTimes = retryTimes
+}
+
+// SetDefaultProxy set default proxy
+func SetDefaultProxy(proxy string) {
+	defaultProxy = proxy
 }
 
 // NewOptions new options
@@ -129,5 +136,12 @@ func WithRetryTimes(times int) OptionHandle {
 func WithLogger(logger LoggerHandle) OptionHandle {
 	return func(opt *Options) {
 		opt.Logger = logger
+	}
+}
+
+// WithProxy set proxy
+func WithProxy(proxy string) OptionHandle {
+	return func(opt *Options) {
+		opt.Proxy = proxy
 	}
 }
