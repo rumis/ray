@@ -1,6 +1,7 @@
 package ray
 
 import (
+	"bufio"
 	"context"
 	"crypto/tls"
 	"encoding/json"
@@ -109,7 +110,7 @@ func Do(opts Options) ([]byte, error) {
 	return body, nil
 }
 
-// DoJSON 发送请求-返回结果反序列化为json对象
+// DoJSON  do request ,and unmarshal the response to json object
 func DoJSON(opts Options, data interface{}) error {
 	body, err := DoRetry(opts)
 	if err != nil {
@@ -118,6 +119,74 @@ func DoJSON(opts Options, data interface{}) error {
 	err = json.Unmarshal(body, data)
 	if err != nil {
 		return errors.WithMessagef(err, "ray.request.dojson.unmarshal, body:%+s", string(body))
+	}
+	return nil
+}
+
+// DoStream do request with a stream response
+func DoStream(opts Options, handFn StreamHandle) error {
+	if opts.URL == "" {
+		return errors.New("ray.dostream, invalid url, url:")
+	}
+	ctx := context.Background()
+	if opts.Timeout > 0 {
+		var cancel context.CancelFunc
+		ctx, cancel = context.WithTimeout(ctx, time.Second*time.Duration(opts.Timeout))
+		defer cancel()
+	}
+	reqUrl := opts.URL
+	var err error
+	if opts.Query != nil {
+		qstr, ok := opts.Query.(string)
+		if !ok {
+			qstr, err = Encode(opts.Query)
+			if err != nil {
+				return errors.WithMessage(err, "ray.request.dostream.query.encode")
+			}
+		}
+		if len(qstr) != 0 {
+			reqUrl = reqUrl + "?" + qstr
+		}
+	}
+	req, err := http.NewRequestWithContext(ctx, opts.Method, reqUrl, opts.Body)
+	if err != nil {
+		return errors.WithMessage(err, "ray.request.dostream.request.new")
+	}
+	if opts.Header != nil && len(opts.Header) > 0 {
+		for k, v := range opts.Header {
+			req.Header.Add(k, v)
+		}
+	}
+	if opts.ContentType != "" {
+		req.Header.Add("Content-Type", opts.ContentType)
+	}
+	client := http.Client{}
+	if defaultProxy != "" || opts.Proxy != "" {
+		proxyURL := defaultProxy
+		if opts.Proxy != "" {
+			proxyURL = opts.Proxy
+		}
+		up, err := url.Parse(proxyURL)
+		if err != nil {
+			return errors.WithMessage(err, "ray.request.dostream.proxy.parse")
+		}
+		client.Transport = &http.Transport{
+			Proxy: http.ProxyURL(up),
+			TLSClientConfig: &tls.Config{
+				InsecureSkipVerify: true,
+			},
+		}
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		return errors.WithMessage(err, "ray.request.dostream.request")
+	}
+	defer resp.Body.Close()
+
+	reader := bufio.NewReader(resp.Body)
+	err = handFn(reader)
+	if err != nil {
+		return errors.WithMessage(err, "ray.request.dostream.handfn")
 	}
 	return nil
 }

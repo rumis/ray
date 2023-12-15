@@ -1,9 +1,12 @@
 package ray
 
 import (
+	"bufio"
 	"io"
 	"strings"
 )
+
+type StreamHandle func(r *bufio.Reader) error
 
 // OptionHandle request option handle
 type OptionHandle func(opt *Options)

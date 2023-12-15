@@ -1,7 +1,9 @@
 package ray
 
 import (
+	"bufio"
 	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -139,4 +141,50 @@ func TestProxy(t *testing.T) {
 	}
 	// Check the response body
 	fmt.Println(string(response))
+}
+func TestDoStream(t *testing.T) {
+	// Create a test server
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// Set the response status code
+		w.WriteHeader(http.StatusOK)
+		// Set the response body
+		w.Write([]byte("Hello, World!\n"))
+		w.Write([]byte("Hello, World-1!\n"))
+		w.Write([]byte("Hello, World-3!\n"))
+
+		w.Write([]byte("done\n"))
+		// time.Sleep(6 * time.Second)
+	}))
+	defer server.Close()
+
+	// Set up the test options
+	opts := Options{
+		URL:     server.URL,
+		Method:  http.MethodGet,
+		Timeout: 5,
+		Query:   nil,
+		Body:    nil,
+		Header:  nil,
+	}
+
+	err := DoStream(opts, func(r *bufio.Reader) error {
+		for {
+			line, err := r.ReadBytes('\n')
+			if err == io.EOF {
+				fmt.Println(string(line))
+				return nil
+			}
+			if err != nil {
+				return err
+			}
+			fmt.Println(string(line))
+		}
+	})
+
+	if err != nil {
+		t.Errorf("X,Unexpected error: %v", err)
+	}
+
+	fmt.Println("Done")
+
 }
